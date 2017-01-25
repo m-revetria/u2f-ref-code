@@ -107,8 +107,8 @@ public class RegisteredKey {
       result.addProperty("appId", appId);
     }
     result.addProperty("version", version);
-    result.addProperty("keyHandle", keyHandle);
-    result.addProperty("sessionId", sessionId);
+    result.addProperty("key_handle", keyHandle);
+    result.addProperty("session_id", sessionId);
     if (this.transports != null) {
       result.add("transports", getTransportsAsJsonArray());
     }

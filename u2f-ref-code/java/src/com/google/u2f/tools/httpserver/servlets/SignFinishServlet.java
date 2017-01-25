@@ -15,7 +15,7 @@ import com.google.u2f.U2FException;
 import com.google.u2f.server.U2FServer;
 import com.google.u2f.server.messages.SignResponse;
 
-public class SignFinishServlet extends HtmlServlet {
+public class SignFinishServlet extends JavascriptServlet {
 
   private final U2FServer u2fServer;
 
@@ -24,17 +24,20 @@ public class SignFinishServlet extends HtmlServlet {
   }
 
   @Override
-  public void generateBody(Request req, Response resp, PrintStream body) {
+  public void generateJavascript(Request req, Response resp, PrintStream body) {
     SignResponse signResponse = new SignResponse(
-        req.getParameter("keyHandle"),
-        req.getParameter("signData"),
-        req.getParameter("browserData"),
-        req.getParameter("sessionId"));
+        req.getParameter("key_handle"),
+        req.getParameter("sign_data"),
+        req.getParameter("client_data"),
+        req.getParameter("session_id")
+    );
+
+    resp.setContentType("application/json");
     try {
       u2fServer.processSignResponse(signResponse);
-      body.println("Success!!!");
+      body.println("{\"status\": \"success\"}");
     } catch (U2FException e) {
-      body.println("Failure: " + e.toString());
+      body.println("{\"status\": \"failed\", \"error\": \"" + e.getMessage() + "\"}");
     }
   }
 }

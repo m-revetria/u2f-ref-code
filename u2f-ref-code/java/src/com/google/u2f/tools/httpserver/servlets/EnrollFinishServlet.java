@@ -11,12 +11,13 @@ import java.io.PrintStream;
 import org.simpleframework.http.Request;
 import org.simpleframework.http.Response;
 
+import com.google.gson.JsonObject;
 import com.google.u2f.U2FException;
 import com.google.u2f.server.U2FServer;
 import com.google.u2f.server.data.SecurityKeyData;
 import com.google.u2f.server.messages.RegistrationResponse;
 
-public class EnrollFinishServlet extends HtmlServlet {
+public class EnrollFinishServlet extends JavascriptServlet {
 
   private final U2FServer u2fServer;
 
@@ -25,18 +26,27 @@ public class EnrollFinishServlet extends HtmlServlet {
   }
 
   @Override
-  public void generateBody(Request req, Response resp, PrintStream body) {
+  public void generateJavascript(Request req, Response resp, PrintStream body) {
     RegistrationResponse registrationResponse = new RegistrationResponse(
-        req.getParameter("enrollData"), req.getParameter("browserData"),
-        req.getParameter("sessionId"));
+        req.getParameter("registration_data"), 
+        req.getParameter("client_data"),
+        req.getParameter("session_id")
+    );
 
+    // req.getParamter("challenge") is not being used by this server
+    resp.setContentType("application/json");
+    
     try {
       SecurityKeyData tokenData = u2fServer.processRegistrationResponse(
           registrationResponse,
           System.currentTimeMillis());
-      body.println("Success!!!\n\nnew token:\n" + tokenData.toString());
+      System.out.println(tokenData.toString());
+
+      JsonObject data = new JsonObject();
+      data.addProperty("status", "success");
+      body.println(data.toString());
     } catch (U2FException e) {
-      body.println("Failure: " + e.toString());
+        body.println("{\"status\": \"failure\",\"token\":\""+ e.getMessage() + "\"}");
     }
   }
 }

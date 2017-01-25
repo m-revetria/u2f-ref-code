@@ -70,7 +70,7 @@ public class U2FServerReferenceImpl implements U2FServer {
     this.challengeGenerator = challengeGenerator;
     this.dataStore = dataStore;
     this.crypto = crypto;
-    this.allowedOrigins = canonicalizeOrigins(origins);
+    this.allowedOrigins = origins;
   }
 
   @Override
@@ -154,10 +154,10 @@ public class U2FServerReferenceImpl implements U2FServer {
     if (!trustedCertificates.contains(attestationCertificate)) {
       Log.warning("attestion cert is not trusted");
     }
-
+    
     verifyBrowserData(
         new JsonParser().parse(clientData), "navigator.id.finishEnrollment", sessionData);
-
+    
     Log.info("Verifying signature of bytes " + Hex.encodeHexString(signedBytes));
     if (!crypto.verifySignature(attestationCertificate, signedBytes, signature)) {
       throw new U2FException("Signature is invalid");
@@ -324,7 +324,7 @@ public class U2FServerReferenceImpl implements U2FServer {
   }
 
   private void verifyOrigin(String origin) throws U2FException {
-    if (!allowedOrigins.contains(canonicalizeOrigin(origin))) {
+    if (!allowedOrigins.contains(origin)) {
       throw new U2FException(origin + " is not a recognized home origin for this backend"
           + Joiner.on(", ").join(allowedOrigins));
     }

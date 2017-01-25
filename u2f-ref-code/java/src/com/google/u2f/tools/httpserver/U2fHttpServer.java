@@ -31,9 +31,11 @@ import com.google.u2f.server.impl.MemoryDataStore;
 import com.google.u2f.server.impl.U2FServerReferenceImpl;
 import com.google.u2f.tools.httpserver.servlets.EnrollDataServlet;
 import com.google.u2f.tools.httpserver.servlets.EnrollFinishServlet;
+import com.google.u2f.tools.httpserver.servlets.EnrollRequestServlet;
 import com.google.u2f.tools.httpserver.servlets.RequestDispatcher;
 import com.google.u2f.tools.httpserver.servlets.SignDataServlet;
 import com.google.u2f.tools.httpserver.servlets.SignFinishServlet;
+import com.google.u2f.tools.httpserver.servlets.SignRequestServlet;
 import com.google.u2f.tools.httpserver.servlets.StaticHandler;
 
 public class U2fHttpServer {
@@ -76,17 +78,21 @@ public class U2fHttpServer {
     try {
       trustedCertificate = (X509Certificate) CertificateFactory.getInstance("X.509")
           .generateCertificate(new ByteArrayInputStream(Hex.decodeHex((
-              "308201433081eaa0030201020209012333009941964658300a06082a8648ce3d"
-                  + "040302301b3119301706035504031310476e756262792048534d2043412030"
-                  + "303022180f32303132303630313030303030305a180f323036323035333132"
-                  + "33353935395a30303119301706035504031310476f6f676c6520476e756262"
-                  + "7920763031133011060355042d030a00012333009941964658305930130607"
-                  + "2a8648ce3d020106082a8648ce3d03010703420004aabc1b97a7c391f8b1fe"
-                  + "5280a65cf27890409bdc392e181ff00ccf39599461d583f3351b21602cf99e"
-                  + "2fe71e7f838658b42df49f06b8446d375d2aaaa8e317a1300a06082a8648ce"
-                  + "3d0403020348003045022037788207c2239373b289169cfd3500b54fe92903"
-                  + "e6772ea995cd2ce4a670fba5022100dfbfe7da528600be0d6125060d029f40"
-                  + "c647bc053e35226fffb66cd7f4609b49").toCharArray())));
+        		  "308201D230820177A00302010202090088A59EE4B363E329300A06082A8648CE"
+        				  + "3D0403023045310B30090603550406130241553113301106035504080C0A536F"
+        				  + "6D652D53746174653121301F060355040A0C18496E7465726E65742057696467"
+        				  + "69747320507479204C7464301E170D3137303132343133343135365A170D3237"
+        				  + "303132353133343135365A3045310B3009060355040613024155311330110603"
+        				  + "5504080C0A536F6D652D53746174653121301F060355040A0C18496E7465726E"
+        				  + "6574205769646769747320507479204C74643059301306072A8648CE3D020106"
+        				  + "082A8648CE3D0301070342000465DFB127BCDC2D8E323263DF34817D4BD9F9B3"
+        				  + "09E63149432F6374917B66A721C3FD3E728924F88764D02CCAF21E5D72631372"
+        				  + "A55F04BB6BA9D2F7402F494589A350304E301D0603551D0E04160414ADE7F364"
+        				  + "E16B13A3CF2814256EAB47CAD1227B10301F0603551D23041830168014ADE7F3"
+        				  + "64E16B13A3CF2814256EAB47CAD1227B10300C0603551D13040530030101FF30"
+        				  + "0A06082A8648CE3D0403020349003046022100B77BF208A8E94BEF652763BB48"
+        				  + "1C658A3E1F14D76D234B57E5A36DF6600E5FCE022100CF7B37BEB97B466877D3"
+        				  + "82289B2EF143C8D27855FE9098F7511C4ED687C52657").toCharArray())));
     } catch (CertificateException e) {
       throw new RuntimeException(e);
     } catch (DecoderException e) {
@@ -94,24 +100,28 @@ public class U2fHttpServer {
     }
     DataStore dataStore = new MemoryDataStore(sessionIdGenerator);
     dataStore.addTrustedCertificate(trustedCertificate);
-
+    
     // this implementation will only accept signatures from http://localhost:8080
     u2fServer = new U2FServerReferenceImpl(challengeGenerator, dataStore,
-        new BouncyCastleCrypto(), ImmutableSet.of("http://localhost:8080"));
+        new BouncyCastleCrypto(), ImmutableSet.of("http://localhost:9901", "ios:bundle-id:me.id.wallet.sandbox"));
     Container dispatchContainer = new RequestDispatcher()
         .registerContainer("/", new StaticHandler("text/html","html/index.html"))
         .registerContainer("/enroll", new StaticHandler("text/html","html/enroll.html"))
+        .registerContainer("/sign", new StaticHandler("text/html","html/sign.html"))
+        
         .registerContainer("/enrollData.js", new EnrollDataServlet(u2fServer))
         .registerContainer("/enrollFinish", new EnrollFinishServlet(u2fServer))
-        .registerContainer("/sign", new StaticHandler("text/html","html/sign.html"))
+        .registerContainer("/enrollRequest", new EnrollRequestServlet(u2fServer))
+
         .registerContainer("/signData.js", new SignDataServlet(u2fServer))
-        .registerContainer("/signFinish", new SignFinishServlet(u2fServer));
+        .registerContainer("/signFinish", new SignFinishServlet(u2fServer))
+    	.registerContainer("/signRequest", new SignRequestServlet(u2fServer));
 
     try {
       Connection connection = new SocketConnection(new ContainerServer(dispatchContainer));
 
       try {
-        connection.connect(new InetSocketAddress("0.0.0.0", 8080));
+        connection.connect(new InetSocketAddress("0.0.0.0", 9901));
 
         synchronized (lock) {
           lock.wait();
